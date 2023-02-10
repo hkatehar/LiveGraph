@@ -18,6 +18,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string_view>
+#include <stdexcept>
+#include <string>
 
 namespace livegraph
 {
