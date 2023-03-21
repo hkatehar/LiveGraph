@@ -600,9 +600,9 @@ void Transaction::abort()
 EdgeIterator Transaction::get_edges(vertex_t src, label_t label, bool reverse)
 {
     check_valid();
-
+    auto vertex_cache = graph.vertex_cache;
     if (src >= graph.vertex_id.load(std::memory_order_relaxed))
-        return EdgeIterator(nullptr, nullptr, 0, 0, read_epoch_id, local_txn_id, reverse);
+        return EdgeIterator(nullptr, nullptr, 0, 0, read_epoch_id, local_txn_id, reverse, vertex_cache, src);
 
     uintptr_t pointer;
     if (batch_update || !trace_cache)
@@ -626,12 +626,12 @@ EdgeIterator Transaction::get_edges(vertex_t src, label_t label, bool reverse)
     auto edge_block = graph.block_manager.convert<EdgeBlockHeader>(pointer);
 
     if (!edge_block)
-        return EdgeIterator(nullptr, nullptr, 0, 0, read_epoch_id, local_txn_id, reverse);
+        return EdgeIterator(nullptr, nullptr, 0, 0, read_epoch_id, local_txn_id, reverse, vertex_cache, src);
 
     auto [num_entries, data_length] = get_num_entries_data_length_cache(edge_block);
 
     return EdgeIterator(edge_block->get_entries(), edge_block->get_data(), num_entries, data_length, read_epoch_id,
-                        local_txn_id, reverse);
+                        local_txn_id, reverse, vertex_cache, src);
 }
 
 timestamp_t Transaction::commit(bool wait_visable)

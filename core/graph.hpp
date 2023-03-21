@@ -19,6 +19,8 @@
 #include <memory>
 #include <mutex>
 #include <unordered_set>
+#include <unordered_map>
+#include <vector>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/enumerable_thread_specific.h>
@@ -32,6 +34,35 @@ namespace livegraph
 {
     class EdgeIterator;
     class Transaction;
+
+    // 2 - default, 1 - presence for sure, 0 - not present for sure
+    class VertexCache {
+    public:
+        VertexCache() = default;
+
+        void add_label_present(vertex_t source, uint32_t label) {
+            if(cache.find(source) == cache.end()) {
+                cache[source] = std::vector<int>(8, 2); 
+            }
+            cache[source][label] = 1;
+        }
+
+        void finished_label(vertex_t source) {
+            for(int i = 0; i < cache[source].size(); i++) {
+                if(cache[source][i] == 2) cache[source][i] = 0;
+            }
+        }
+
+        bool has_neighbours(vertex_t source, uint32_t label) {
+            if(cache.find(source) == cache.end()) {
+                return true;
+            }
+            else return !(cache[source][label] == 0);
+        }
+
+    private:
+        std::unordered_map<vertex_t, std::vector<int>> cache;
+    };
 
     class Graph
     {
@@ -50,7 +81,8 @@ namespace livegraph
               max_vertex_id(_max_vertex_id),
               array_allocator(),
               block_manager(block_path, _max_block_size),
-              commit_manager(wal_path, epoch_id)
+              commit_manager(wal_path, epoch_id),
+              vertex_cache()
         {
             auto futex_allocater =
                 std::allocator_traits<decltype(array_allocator)>::rebind_alloc<Futex>(array_allocator);
@@ -86,6 +118,10 @@ namespace livegraph
         Transaction begin_read_only_transaction();
         Transaction begin_batch_loader();
 
+        VertexCache get_vertex_cache(){
+            return vertex_cache;
+        }
+
     private:
         using cacheline_padding_t = char[64];
 
@@ -109,6 +145,7 @@ namespace livegraph
         SparseArrayAllocator<void> array_allocator;
         BlockManager block_manager;
         CommitManager commit_manager;
+        VertexCache vertex_cache;
 
         Futex *vertex_futexes;
         uintptr_t *vertex_ptrs;

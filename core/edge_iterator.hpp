@@ -30,14 +30,18 @@ namespace livegraph
                      size_t _data_length,
                      timestamp_t _read_epoch_id,
                      timestamp_t _local_txn_id,
-                     bool _reverse)
+                     bool _reverse,
+                     VertexCache& vertex_cache,
+                     vertex_t src)
             : entries(_entries),
               data(_data),
               num_entries(_num_entries),
               data_length(_data_length),
               read_epoch_id(_read_epoch_id),
               local_txn_id(_local_txn_id),
-              reverse(_reverse)
+              reverse(_reverse),
+              vertex_cache(vertex_cache),
+              src(src)
         {
             if (!reverse)
             {
@@ -84,7 +88,14 @@ namespace livegraph
 
         EdgeIterator(EdgeIterator &&) = default;
 
-        bool valid() const
+        bool valid()
+        {
+            bool validd = _valid();
+            if(!validd) vertex_cache.finished_label(src);
+            return validd;
+        }
+
+        bool _valid() const
         {
             if (!reverse)
                 return !(entries_cursor == entries);
@@ -94,6 +105,7 @@ namespace livegraph
 
         void next()
         {
+            vertex_cache.add_label_present(src, entries_cursor->get_dst() % 8);
             if (!reverse)
             {
                 while (valid())
@@ -126,7 +138,7 @@ namespace livegraph
 
         vertex_t dst_id() const
         {
-            if (!valid())
+            if (!_valid())
                 return Graph::VERTEX_TOMBSTONE;
             if (!reverse)
                 return entries_cursor->get_dst();
@@ -136,7 +148,7 @@ namespace livegraph
 
         std::string_view edge_data() const
         {
-            if (!valid())
+            if (!_valid())
                 return std::string_view();
             if (!reverse)
                 return std::string_view(data_cursor - entries_cursor->get_length(), entries_cursor->get_length());
@@ -154,5 +166,7 @@ namespace livegraph
         bool reverse;
         EdgeEntry *entries_cursor;
         char *data_cursor;
+        VertexCache vertex_cache;
+        vertex_t src;
     };
 } // namespace livegraph

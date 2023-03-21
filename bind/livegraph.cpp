@@ -19,6 +19,13 @@
 using namespace lg;
 namespace impl = livegraph;
 
+VertexCache::VertexCache(std::unique_ptr<livegraph::VertexCache> _vc): vertex_cache(std::move(_vc)){}
+VertexCache::~VertexCache() = default;
+
+bool VertexCache::has_neighbours(vertex_t source, uint32_t label) {
+    return vertex_cache->has_neighbours(source, label);
+}
+
 Graph::Graph(std::string block_path, std::string wal_path, size_t max_block_size, vertex_t max_vertex_id)
     : graph(std::make_unique<impl::Graph>(block_path, wal_path, max_block_size, max_vertex_id))
 {
@@ -38,6 +45,11 @@ Transaction Graph::begin_read_only_transaction()
 }
 
 Transaction Graph::begin_batch_loader() { return std::make_unique<impl::Transaction>(graph->begin_batch_loader()); }
+
+VertexCache Graph::get_vertex_cache(){
+    return std::make_unique<impl::VertexCache>(graph->get_vertex_cache());
+    // return graph->get_vertex_cache();
+}
 
 Transaction::Transaction(std::unique_ptr<livegraph::Transaction> _txn) : txn(std::move(_txn)) {}
 

@@ -27,6 +27,7 @@ namespace livegraph
     class Graph;
     class Transaction;
     class EdgeIterator;
+    class VertexCache;
 } // namespace livegraph
 
 namespace lg
@@ -38,6 +39,16 @@ namespace lg
 
     class EdgeIterator;
     class Transaction;
+
+    class VertexCache {
+    public:
+        VertexCache(std::unique_ptr<livegraph::VertexCache> _vc);
+        ~VertexCache();
+        bool has_neighbours(vertex_t source, uint32_t label);
+
+    private:
+        const std::unique_ptr<livegraph::VertexCache> vertex_cache;
+    };
 
     class Graph
     {
@@ -56,6 +67,7 @@ namespace lg
         Transaction begin_read_only_transaction();
         Transaction begin_batch_loader();
 
+        VertexCache get_vertex_cache();
     private:
         const std::unique_ptr<livegraph::Graph> graph;
         constexpr static timestamp_t NO_TRANSACTION = -1;
