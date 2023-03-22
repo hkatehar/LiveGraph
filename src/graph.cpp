@@ -16,7 +16,12 @@
 #include "core/graph.hpp"
 #include "core/transaction.hpp"
 
+#include <mutex>
+#include <chrono>
+
 using namespace livegraph;
+
+std::mutex _log_mutex;
 
 Transaction Graph::begin_transaction()
 {
@@ -44,6 +49,7 @@ Transaction Graph::begin_batch_loader()
 
 timestamp_t Graph::compact(timestamp_t read_epoch_id)
 {
+    auto start = std::chrono::high_resolution_clock::now();
     if (read_epoch_id == NO_TRANSACTION)
         read_epoch_id = epoch_id.load();
     for (auto id : read_epoch_table)
@@ -188,7 +194,9 @@ timestamp_t Graph::compact(timestamp_t read_epoch_id)
 
     compact_table.local().swap(new_compact_table);
 
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     // printf("Compact %lu bytes blocks\n", recycled_block_size);
-
+    LOG("Compaction Time: " << duration.count());
     return read_epoch_id;
 }

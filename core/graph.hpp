@@ -19,6 +19,7 @@
 #include <memory>
 #include <mutex>
 #include <unordered_set>
+#include <iostream>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/enumerable_thread_specific.h>
@@ -27,6 +28,9 @@
 #include "block_manager.hpp"
 #include "commit_manager.hpp"
 #include "futex.hpp"
+
+extern std::mutex _log_mutex;
+#define LOG( msg ) { std::scoped_lock lock(_log_mutex); std::cout << msg << /* flush immediately */ std::endl; }
 
 namespace livegraph
 {

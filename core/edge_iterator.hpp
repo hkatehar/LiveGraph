@@ -50,6 +50,7 @@ namespace livegraph
                 data_cursor = data;       // at the begining
             }
 
+            uint64_t jumps = 0;
             if (!reverse)
             {
                 while (valid())
@@ -61,6 +62,7 @@ namespace livegraph
                     }
                     data_cursor -= entries_cursor->get_length();
                     entries_cursor++;
+                    jumps++;
                 }
             }
             else
@@ -76,15 +78,28 @@ namespace livegraph
                     }
                     data_cursor += (entries_cursor - 1)->get_length();
                     entries_cursor--;
+                    jumps++;
                 }
             }
+            total_jumps += jumps;
+            total_count++;
         }
 
-        EdgeIterator(const EdgeIterator &) = default;
+        // EdgeIterator(const EdgeIterator &) = default;
 
-        EdgeIterator(EdgeIterator &&) = default;
+        // EdgeIterator(EdgeIterator &&) = default;
 
         bool valid() const
+        {
+            bool val = _valid();
+            // if(!val){
+            //     LOG("Total Jumps: " << total_jumps);
+            //     LOG("Total Count: " << total_count);
+            // }
+            return val;
+        }
+
+        bool _valid() const
         {
             if (!reverse)
                 return !(entries_cursor == entries);
@@ -94,12 +109,14 @@ namespace livegraph
 
         void next()
         {
+            uint64_t jumps = -1;
             if (!reverse)
             {
                 while (valid())
                 {
                     data_cursor -= entries_cursor->get_length();
                     entries_cursor++;
+                    jumps++;
                     if (cmp_timestamp(entries_cursor->get_creation_time_pointer(), read_epoch_id, local_txn_id) <= 0 &&
                         cmp_timestamp(entries_cursor->get_deletion_time_pointer(), read_epoch_id, local_txn_id) > 0)
                     {
@@ -113,6 +130,7 @@ namespace livegraph
                 {
                     data_cursor += (entries_cursor - 1)->get_length();
                     entries_cursor--;
+                    jumps++;
                     if (cmp_timestamp((entries_cursor - 1)->get_creation_time_pointer(), read_epoch_id, local_txn_id) <=
                             0 &&
                         cmp_timestamp((entries_cursor - 1)->get_deletion_time_pointer(), read_epoch_id, local_txn_id) >
@@ -122,6 +140,9 @@ namespace livegraph
                     }
                 }
             }
+
+            total_jumps += jumps;
+            total_count++;
         }
 
         vertex_t dst_id() const
@@ -154,5 +175,7 @@ namespace livegraph
         bool reverse;
         EdgeEntry *entries_cursor;
         char *data_cursor;
+        uint64_t total_jumps = 0;
+        uint64_t total_count = 0;
     };
 } // namespace livegraph
